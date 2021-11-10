@@ -8,6 +8,7 @@ import {
 } from "./errorHandlers.js";
 import cors from "cors";
 import blogRouter from "./services/blogs/index.js";
+import commentsRouter from "./services/comments/index.js";
 
 const server = express();
 
@@ -20,6 +21,7 @@ server.use(express.json());
 // ********************************* ROUTES ********************************************
 
 server.use("/blogs", blogRouter);
+server.use("/comments", commentsRouter);
 
 // ********************************* ERROR HANDLERS ************************************
 
