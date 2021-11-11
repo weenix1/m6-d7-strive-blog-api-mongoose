@@ -9,6 +9,8 @@ import {
 import cors from "cors";
 import blogRouter from "./services/blogs/index.js";
 import commentsRouter from "./services/comments/index.js";
+import authorsRouter from "./services/authors/index.js";
+import likesRouter from "./services/likes/index.js";
 
 const server = express();
 
@@ -22,6 +24,8 @@ server.use(express.json());
 
 server.use("/blogs", blogRouter);
 server.use("/comments", commentsRouter);
+server.use("/authors", authorsRouter);
+server.use("/likes", likesRouter);
 
 // ********************************* ERROR HANDLERS ************************************
 

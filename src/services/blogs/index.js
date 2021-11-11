@@ -1,5 +1,6 @@
 import express from "express";
 import createHttpError from "http-errors";
+import mongoose from "mongoose";
 
 import q2m from "query-to-mongo";
 
@@ -28,7 +29,9 @@ blogRouter.get("/", async (req, res, next) => {
     const blogs = await BlogsModel.find(mongoQuery.criteria)
       .limit(mongoQuery.options.limit)
       .skip(mongoQuery.options.skip)
-      .sort(mongoQuery.options.sort);
+      .sort(mongoQuery.options.sort)
+      .populate({ path: "author", select: "firstName lastName" })
+      .populate({ path: "likes" });
     res.send({
       links: mongoQuery.links("/blogs", total),
       pageTotal: Math.ceil(total / mongoQuery.options.limit),
@@ -44,7 +47,10 @@ blogRouter.get("/:blogId", async (req, res, next) => {
   try {
     const id = req.params.blogId;
 
-    const blog = await BlogsModel.findById(id);
+    const blog = await BlogsModel.findById(id).populate({
+      path: "author",
+      select: "firstName lastName",
+    });
     if (blog) {
       res.send(blog);
     } else {
@@ -82,6 +88,41 @@ blogRouter.delete("/:blogId", async (req, res, next) => {
     } else {
       next(createHttpError(404, `User with id ${id} not found!`));
     }
+  } catch (error) {
+    next(error);
+  }
+});
+
+blogRouter.put("/:blogId/like", async (req, res, next) => {
+  try {
+    const id = req.params.blogId;
+    console.log(id);
+    const post = await BlogsModel.findById(id);
+    if (post) {
+      const liked = await BlogsModel.findOne({
+        _id: id,
+        likes: new mongoose.Types.ObjectId(req.body.authorId),
+      });
+      console.log(liked);
+
+      if (!liked) {
+        await BlogsModel.findByIdAndUpdate(
+          id,
+          {
+            $push: { likes: req.body.authorId },
+          },
+          { new: true }
+        );
+      } else {
+        await BlogsModel.findByIdAndUpdate(id, {
+          $pull: { likes: req.body.authorId },
+        });
+      }
+    } else {
+      next(createHttpError(404, `post with this id ${id} not found`));
+    }
+    await post.save();
+    res.status(201).send(post);
   } catch (error) {
     next(error);
   }
@@ -225,3 +266,16 @@ blogRouter.delete("/:blogId/comment/:commentId", async (req, res, next) => {
 });
 
 export default blogRouter;
+
+/* {posting
+  "category": "{{$randomJobType}}",
+  "title": "{{$randomJobTitle}}",
+  "cover":"{{$randomImageUrl}}",
+  "readTime": {
+    "value": {{$randomInt}},
+    "unit": {{$randomInt}}
+  },
+  "author": "618d3eff1f96296abe187610",
+  "content": "Cloud"
+           
+} */

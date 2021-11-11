@@ -34,7 +34,7 @@ commentsRouter.get("/", async (req, res, next) => {
       links: mongoQuery.links("/comments", total),
       pageTotal: Math.ceil(total / mongoQuery.options.limit),
       total,
-      books,
+      comments,
     });
   } catch (error) {
     next(error);

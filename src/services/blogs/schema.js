@@ -13,10 +13,7 @@ const blogSchema = new Schema(
         unit: { type: Number, required: true },
       },
     ],
-    author: {
-      name: { type: String, required: true },
-      avatar: { type: String, required: false },
-    },
+    author: { type: Schema.Types.ObjectId, ref: "Author" },
     content: { type: String, required: true },
     comments: [
       {
@@ -24,6 +21,7 @@ const blogSchema = new Schema(
         userName: { type: String },
       },
     ],
+    likes: [{ type: Schema.Types.ObjectId, ref: "Author" }],
   },
 
   {
