@@ -20,6 +20,7 @@ blogRouter.post("/", async (req, res, next) => {
 
 blogRouter.get("/", async (req, res, next) => {
   //http://localhost:3002/blogs?limit=2&sort=-author&offset=15
+  ///blogs?limit=5&sort=-author&offset=10
   try {
     const mongoQuery = q2m(req.query);
     console.log(mongoQuery);
