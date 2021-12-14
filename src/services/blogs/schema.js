@@ -13,7 +13,7 @@ const blogSchema = new Schema(
         unit: { type: Number, required: true },
       },
     ],
-    author: { type: Schema.Types.ObjectId, ref: "Author" },
+    user: { type: Schema.Types.ObjectId, ref: "User" },
     content: { type: String, required: true },
     comments: [
       {

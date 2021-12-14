@@ -30,7 +30,7 @@ blogRouter.get("/", async (req, res, next) => {
       .limit(mongoQuery.options.limit)
       .skip(mongoQuery.options.skip)
       .sort(mongoQuery.options.sort)
-      .populate({ path: "author", select: "firstName lastName" })
+      .populate({ path: "user" /* select: "firstName lastName"  */ })
       .populate({ path: "likes" });
     res.send({
       links: mongoQuery.links("/blogs", total),
