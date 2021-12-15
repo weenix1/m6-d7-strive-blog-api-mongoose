@@ -3,10 +3,12 @@ import UserModel from "./schema.js";
 import BlogsModel from "./schema.js";
 import { basicAuthMiddleware } from "../../auth/basic.js";
 import { adminOnlyMiddleware } from "../../auth/admin.js";
+import { JWTAuthenticate } from "../../auth/tools.js";
+import { JWTAuthMiddleware } from "../../auth/token.js";
 
 const usersRouter = express.Router();
 
-usersRouter.post("/", async (req, res, next) => {
+usersRouter.post("/register", async (req, res, next) => {
   try {
     const newUser = new UserModel(req.body);
     const { _id } = await newUser.save();
@@ -18,7 +20,7 @@ usersRouter.post("/", async (req, res, next) => {
 
 usersRouter.get(
   "/",
-  basicAuthMiddleware,
+  JWTAuthMiddleware,
   adminOnlyMiddleware,
   async (req, res, next) => {
     try {
@@ -32,7 +34,7 @@ usersRouter.get(
 
 usersRouter.get(
   "/me",
-  basicAuthMiddleware,
+  JWTAuthMiddleware,
 
   async (req, res, next) => {
     try {
@@ -42,7 +44,7 @@ usersRouter.get(
     }
   }
 );
-usersRouter.get("/me/stories", basicAuthMiddleware, async (req, res, next) => {
+usersRouter.get("/me/stories", JWTAuthMiddleware, async (req, res, next) => {
   try {
     const blog = await BlogsModel.find(req.user);
     if (blog) {
@@ -56,7 +58,7 @@ usersRouter.get("/me/stories", basicAuthMiddleware, async (req, res, next) => {
   }
 });
 
-usersRouter.get("/:id", basicAuthMiddleware, async (req, res, next) => {
+usersRouter.get("/:id", JWTAuthMiddleware, async (req, res, next) => {
   try {
     const user = await UserModel.findById(req.params.id);
     res.send(user);
@@ -95,15 +97,15 @@ usersRouter.put(
   }
 );
 
-usersRouter.delete("/me", basicAuthMiddleware, async (req, res, next) => {
-  const id = req.user._id.toString();
+usersRouter.delete("/me", JWTAuthMiddleware, async (req, res, next) => {
+  const me = req.user._id.toString();
 
   try {
-    const deletedUser = await UserModel.findByIdAndDelete(id);
+    const deletedUser = await UserModel.findByIdAndDelete(me);
     if (deletedUser) {
       res.send(deletedUser);
     } else {
-      next(createHttpError(404, `User with id ${id} not found!`));
+      next(createHttpError(404, `User with id ${me} not found!`));
     }
   } catch (error) {
     next(error);
@@ -115,11 +117,61 @@ usersRouter.delete(
   basicAuthMiddleware,
   adminOnlyMiddleware,
   async (req, res, next) => {
+    const id = req.user._id.toString();
+
     try {
+      const deletedUser = await UserModel.findByIdAndDelete(id);
+      if (deletedUser) {
+        res.send(deletedUser);
+      } else {
+        next(createHttpError(404, `User with id ${id} not found!`));
+      }
     } catch (error) {
       next(error);
     }
   }
 );
 
+usersRouter.post("/login", async (req, res, next) => {
+  try {
+    // 1. Get credentials from req.body
+    const { email, password } = req.body;
+
+    // 2. Verify credentials
+    const user = await UserModel.checkCredentials(email, password);
+
+    if (user) {
+      // 3. If credentials are fine we are going to generate an access token
+      const accessToken = await JWTAuthenticate(user);
+      res.send({ accessToken });
+    } else {
+      // 4. If they are not --> error (401)
+      next(createHttpError(401, "Credentials not ok!"));
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+/* usersRouter.post("/register", async (req, res, next) => {
+  try {
+    // 1. Get credentials from req.body
+    const { email, password } = req.body;
+
+    // 2. Verify credentials
+    const user = await UserModel.checkCredentials(email, password);
+
+    if (user) {
+      // 3. If credentials are fine we are going to generate an access token
+      const accessToken = await JWTAuthenticate(user);
+      res.send({ accessToken });
+    } else {
+      // 4. If they are not --> error (401)
+      next(createHttpError(401, "Credentials not ok!"));
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+ */
 export default usersRouter;
