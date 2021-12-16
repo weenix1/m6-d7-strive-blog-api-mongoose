@@ -14,14 +14,18 @@ import commentsRouter from "./services/comments/index.js";
 import authorsRouter from "./services/authors/index.js";
 import likesRouter from "./services/likes/index.js";
 import usersRouter from "./services/users/index.js";
+import passport from "passport";
+import GoogleStrategy from "./auth/oauth.js";
 
 const server = express();
 
 const port = process.env.PORT;
 // ********************************* MIDDLEWARES ***************************************
+passport.use("google", GoogleStrategy);
 
 server.use(cors());
 server.use(express.json());
+server.use(passport.initialize());
 
 // ********************************* ROUTES ********************************************
 

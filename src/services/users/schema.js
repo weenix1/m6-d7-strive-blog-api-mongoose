@@ -7,8 +7,19 @@ const UserSchema = new Schema({
   surName: { type: String, required: true },
   firstName: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  password: {
+    type: String,
+    required: function () {
+      return !this.googleId;
+    },
+  },
   role: { type: String, default: "User", enum: ["User", "Admin"] },
+  googleId: {
+    type: String,
+    required: function () {
+      return !this.password;
+    },
+  },
 });
 
 UserSchema.pre("save", async function (next) {

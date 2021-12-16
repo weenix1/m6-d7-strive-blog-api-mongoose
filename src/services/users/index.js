@@ -3,8 +3,12 @@ import UserModel from "./schema.js";
 import BlogsModel from "./schema.js";
 import { basicAuthMiddleware } from "../../auth/basic.js";
 import { adminOnlyMiddleware } from "../../auth/admin.js";
-import { JWTAuthenticate } from "../../auth/tools.js";
+import {
+  JWTAuthenticate,
+  verifyRefreshAndGenerateTokens,
+} from "../../auth/tools.js";
 import { JWTAuthMiddleware } from "../../auth/token.js";
+import passport from "passport";
 
 const usersRouter = express.Router();
 
@@ -44,6 +48,30 @@ usersRouter.get(
     }
   }
 );
+
+usersRouter.get(
+  "/googleLogin",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+); // This endpoint receives Google Login requests from our FE, and it is going to redirect them to Google Consent Screen
+
+usersRouter.get(
+  "/googleRedirect",
+  passport.authenticate("google"),
+  async (req, res, next) => {
+    // This endpoint URL needs to match EXACTLY to the one configured on google.cloud dashboard
+    try {
+      // Thanks to passport.serialize we are going to receive the tokens in the request
+      console.log("TOKENS: ", req.user.tokens);
+
+      res.redirect(
+        `${process.env.FE_URL}?accessToken=${req.user.tokens.accessToken}&refreshToken=${req.user.tokens.refreshToken}`
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 usersRouter.get("/me/stories", JWTAuthMiddleware, async (req, res, next) => {
   try {
     const blog = await BlogsModel.find(req.user);
@@ -142,8 +170,8 @@ usersRouter.post("/login", async (req, res, next) => {
 
     if (user) {
       // 3. If credentials are fine we are going to generate an access token
-      const accessToken = await JWTAuthenticate(user);
-      res.send({ accessToken });
+      const { accessToken, refreshToken } = await JWTAuthenticate(user);
+      res.send({ accessToken, refreshToken });
     } else {
       // 4. If they are not --> error (401)
       next(createHttpError(401, "Credentials not ok!"));
@@ -153,25 +181,22 @@ usersRouter.post("/login", async (req, res, next) => {
   }
 });
 
-/* usersRouter.post("/register", async (req, res, next) => {
+usersRouter.post("/refreshToken", async (req, res, next) => {
   try {
-    // 1. Get credentials from req.body
-    const { email, password } = req.body;
+    // 1. Receive the current refresh token from req.body
+    const { currentRefreshToken } = req.body;
 
-    // 2. Verify credentials
-    const user = await UserModel.checkCredentials(email, password);
+    // 2. Check the validity of that (check if it is not expired, check if it hasn't been compromised, check if it is in db)
+    const { accessToken, refreshToken } = await verifyRefreshAndGenerateTokens(
+      currentRefreshToken
+    );
+    // 3. If everything is fine --> generate a new pair of tokens (accessToken and refreshToken)
 
-    if (user) {
-      // 3. If credentials are fine we are going to generate an access token
-      const accessToken = await JWTAuthenticate(user);
-      res.send({ accessToken });
-    } else {
-      // 4. If they are not --> error (401)
-      next(createHttpError(401, "Credentials not ok!"));
-    }
+    // 4. Send tokens back as a response
+    res.send({ accessToken, refreshToken });
   } catch (error) {
     next(error);
   }
 });
- */
+
 export default usersRouter;
